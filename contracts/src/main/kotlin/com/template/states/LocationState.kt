@@ -10,10 +10,10 @@ import net.corda.core.serialization.CordaSerializable
 // * State *
 // *********
 @BelongsToContract(TemplateContract::class)
-data class LocationState(//val asset: StaticPointer<AssetState>,
-        val gps: Gps,
-        override val linearId: UniqueIdentifier) : LinearState{
-    override val participants: List<AbstractParty> = listOf()
+data class LocationState(val gps: Gps,
+                         val allParticipants: List<Party>,
+                         override val linearId: UniqueIdentifier) : LinearState {
+    override val participants: List<AbstractParty> = allParticipants
     fun withNewGps(gps: Gps) = copy(gps = gps)
 }
 

@@ -5,10 +5,8 @@ import com.template.contracts.TemplateContract
 import com.template.states.AssetState
 import com.template.states.Gps
 import com.template.states.LocationState
-import net.corda.core.contracts.Command
-import net.corda.core.contracts.StateAndContract
-import net.corda.core.contracts.StaticPointer
-import net.corda.core.contracts.UniqueIdentifier
+import com.template.states.ObligationState
+import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
@@ -21,7 +19,9 @@ import net.corda.core.utilities.ProgressTracker
 // *********
 @InitiatingFlow
 @StartableByRPC
-class MoveFlowInitiator(val linearId: UniqueIdentifier, val gps: Gps) : FlowLogic<SignedTransaction>() {
+class MoveFlowInitiator(val linearId: UniqueIdentifier,
+                        val longitude: Float,
+                        val latitude: Float) : FlowLogic<SignedTransaction>() {
     override val progressTracker = ProgressTracker()
 
     @Suspendable
@@ -32,21 +32,23 @@ class MoveFlowInitiator(val linearId: UniqueIdentifier, val gps: Gps) : FlowLogi
         val inputAsset = assetStateAndRef.state.data
         val locationStateAndRef =  serviceHub.vaultService.queryBy<LocationState>(queryCriteria).states.single()
         val inputLocation = locationStateAndRef.state.data
+        val inputObligation =  serviceHub.vaultService.queryBy<ObligationState>(queryCriteria).states.single().state.data
 
         // Stage 2. Create the new Parent and Child state reflecting a new gps.
+        val gps = Gps(longitude, latitude)
         val outputAsset = inputAsset.withNewDts()
         val outputLocation = inputLocation.withNewGps(gps)
 
 
         // Stage 3. Create the transfer command.
-        val signers = inputAsset.participants.map { it.owningKey }
+        val signers = listOf(inputAsset.owner.owningKey)
         val transferCommand = Command(TemplateContract.Commands.Transfer(), signers)
 
         // Stage 4. Get a reference to a transaction builder.
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
         val builder = TransactionBuilder(notary = notary)
 
-        // Stage 5. Create the transaction which comprises one input, one output and one command.
+        // Stage 5. Create the transaction which comprises inputs, outputs and one command.
         builder.withItems(assetStateAndRef,
                 locationStateAndRef,
                 StateAndContract(outputAsset, TemplateContract.ID),
@@ -57,9 +59,9 @@ class MoveFlowInitiator(val linearId: UniqueIdentifier, val gps: Gps) : FlowLogi
         builder.verify(serviceHub)
         val ptx = serviceHub.signInitialTransaction(builder)
 
-        // Stage 7. Collect signature from borrower and the new lender and add it to the transaction.
+        // Stage 7. Collect signature and add it to the transaction.
         // This also verifies the transaction and checks the signatures.
-        val sessions = listOf(initiateFlow(ourIdentity))
+        val sessions = listOf(initiateFlow(inputObligation.beneficiary))
         val stx = subFlow(CollectSignaturesFlow(ptx, sessions))
 
         // Stage 8. Notarise and record the transaction in our vaults.
@@ -68,9 +70,17 @@ class MoveFlowInitiator(val linearId: UniqueIdentifier, val gps: Gps) : FlowLogi
 }
 
 @InitiatedBy(MoveFlowInitiator::class)
-class MoveFlowResponder(val counterpartySession: FlowSession) : FlowLogic<Unit>() {
+class MoveFlowResponder(val flowSession: FlowSession) : FlowLogic<SignedTransaction>() {
     @Suspendable
-    override fun call() {
-        // Responder flow logic goes here.
+    override fun call(): SignedTransaction {
+        val signedTransactionFlow = object : SignTransactionFlow(flowSession) {
+            override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                // some requirements
+            }
+        }
+
+        val txWeJustSignedId = subFlow(signedTransactionFlow)
+
+        return subFlow(ReceiveFinalityFlow(otherSideSession = flowSession, expectedTxId = txWeJustSignedId.id))
     }
 }

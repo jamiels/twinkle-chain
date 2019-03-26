@@ -18,7 +18,7 @@ data class AssetState(val data: String,
                       val owner: Party,
                       val type: String,
                       val dts: Instant,
-                      override val linearId: UniqueIdentifier) : LinearState {
+                      override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState {
     override val participants: List<AbstractParty> = listOf(owner)
 
     fun withNewDts() = copy(dts = Instant.now())
