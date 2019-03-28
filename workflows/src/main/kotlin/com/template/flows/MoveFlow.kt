@@ -75,7 +75,7 @@ class MoveFlowResponder(val flowSession: FlowSession) : FlowLogic<SignedTransact
     override fun call(): SignedTransaction {
         val signedTransactionFlow = object : SignTransactionFlow(flowSession) {
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                // some requirements
+                // some requirements should be here
             }
         }
 

@@ -28,8 +28,6 @@ repeat step 2 and check states with new data
 
 
 
-
-
 Each Spring Boot server needs to be started in its own terminal/command prompt, replace X with A, B and C:
 - Unix/Mac OSX: ./gradlew runPartyXServer
 - Windows: gradlew.bat runPartyXServer
