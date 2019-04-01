@@ -36,7 +36,6 @@ class MoveFlowInitiator(val linearId: UniqueIdentifier,
 
         // Stage 2. Create the new Parent and Child state reflecting a new gps.
         val gps = Gps(longitude, latitude)
-        val outputAsset = inputAsset.withNewDts()
         val outputLocation = inputLocation.withNewGps(gps)
 
 
@@ -49,9 +48,8 @@ class MoveFlowInitiator(val linearId: UniqueIdentifier,
         val builder = TransactionBuilder(notary = notary)
 
         // Stage 5. Create the transaction which comprises inputs, outputs and one command.
-        builder.withItems(assetStateAndRef,
+        builder.withItems(
                 locationStateAndRef,
-                StateAndContract(outputAsset, TemplateContract.ID),
                 StateAndContract(outputLocation, TemplateContract.ID),
                 transferCommand)
 
