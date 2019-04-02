@@ -2,19 +2,21 @@ package com.template.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.TemplateContract
+import agriledger.twinkle.firebase.FirebaseRepository
 import com.template.states.AssetState
 import com.template.states.Gps
 import com.template.states.LocationState
 import com.template.states.ObligationState
 import net.corda.core.contracts.*
-import net.corda.core.contracts.Requirements.using
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import java.io.FileInputStream
 import java.time.Instant
 import java.util.*
+
 
 // *********
 // * Flows *
@@ -39,7 +41,8 @@ class OriginateAssetFlowInitiator(val data: String,
 
 
         //create state and additional data for child states
-        val assetState = AssetState(data, owner, type, Instant.now())
+        val dts = Instant.now()
+        val assetState = AssetState(data, owner, type, dts)
         val amountItem = Amount(amount.toLong() * 100, Currency.getInstance(currency))
         val gps = Gps(longitude, latitude)
 
@@ -73,8 +76,16 @@ class OriginateAssetFlowInitiator(val data: String,
         val stx = subFlow(CollectSignaturesFlow(ptx, sessions))
 
         // Stage 9. Notarise and record the transaction in our vaults.
-        return subFlow(FinalityFlow(stx, sessions))
+        val notarizedTx= subFlow(FinalityFlow(stx, sessions))
+
+
+       FirebaseRepository(assetState.linearId.toString(), data, owner.toString(), type, dts).save()
+
+
+        return notarizedTx
     }
+
+
 }
 
 @InitiatedBy(OriginateAssetFlowInitiator::class)

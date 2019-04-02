@@ -1,5 +1,5 @@
 Run the deployNodes Gradle task to build four nodes with our CorDapp already installed on them:
-- Unix/Mac OSX: ./gradlew deployNodes
+- Unix/Mac OSX: ./gradlew clean deployNodes
 - Windows: gradlew.bat deployNodes
 
 Start the nodes by running the following command from the root of the cordapp-example folder:
@@ -21,7 +21,7 @@ take linear id from one of the state and put it into move flow
 
 step 3
 Transfer fruits
-flow start MoveFlowInitiator linearId: 12bf04ea-953b-4420-afe0-a724580a5366, longitude: 20, latitude: 20
+flow start MoveFlowInitiator linearId: e8e36375-1b9f-4d87-bafd-3e496232a83e, longitude: 20, latitude: 20
 
 step 4
 repeat step 2 and check states with new data

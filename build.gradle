@@ -17,7 +17,7 @@ buildscript {
         mavenLocal()
         mavenCentral()
         jcenter()
-        maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda' }    
+        maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda' }
     }
 
     dependencies {
@@ -81,6 +81,7 @@ dependencies {
     cordaCompile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     cordaCompile "org.apache.logging.log4j:log4j-web:${log4j_version}"
     cordaCompile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    
 }
 
 cordapp {
