@@ -21,7 +21,7 @@ take linear id from one of the state and put it into move flow
 
 step 3
 Transfer fruits
-flow start MoveFlowInitiator linearId: e8e36375-1b9f-4d87-bafd-3e496232a83e, longitude: 20, latitude: 20
+flow start MoveFlowInitiator linearId: 1e249f01-5602-4b9c-93f3-5ce25e933087, longitude: 25.5, latitude: 20
 
 step 4
 repeat step 2 and check states with new data

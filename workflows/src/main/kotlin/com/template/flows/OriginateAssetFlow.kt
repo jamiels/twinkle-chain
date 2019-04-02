@@ -78,9 +78,8 @@ class OriginateAssetFlowInitiator(val data: String,
         // Stage 9. Notarise and record the transaction in our vaults.
         val notarizedTx= subFlow(FinalityFlow(stx, sessions))
 
-
-       FirebaseRepository(assetState.linearId.toString(), data, owner.toString(), type, dts).save()
-
+        // Stage 10 cashe data in firebase
+        FirebaseRepository().cacheAsset(assetState.linearId.toString(), data, owner.toString(), type, dts, latitude, longitude)
 
         return notarizedTx
     }

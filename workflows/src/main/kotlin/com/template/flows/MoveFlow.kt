@@ -1,5 +1,6 @@
 package com.template.flows
 
+import agriledger.twinkle.firebase.FirebaseRepository
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.TemplateContract
 import com.template.states.AssetState
@@ -63,7 +64,12 @@ class MoveFlowInitiator(val linearId: UniqueIdentifier,
         val stx = subFlow(CollectSignaturesFlow(ptx, sessions))
 
         // Stage 8. Notarise and record the transaction in our vaults.
-        return subFlow(FinalityFlow(stx, sessions))
+        val norarizedTx = subFlow(FinalityFlow(stx, sessions))
+
+        // Stage 9 cashe data in firebase
+        FirebaseRepository().cacheMove(linearId.toString(), latitude, longitude)
+
+        return norarizedTx
     }
 }
 
