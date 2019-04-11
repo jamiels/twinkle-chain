@@ -3,17 +3,13 @@ package com.template.flows
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.TemplateContract
 import agriledger.twinkle.firebase.FirebaseRepository
-import com.template.states.AssetState
-import com.template.states.Gps
-import com.template.states.LocationState
-import com.template.states.ObligationState
+import com.template.states.*
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import java.io.FileInputStream
 import java.time.Instant
 import java.util.*
 
@@ -23,14 +19,9 @@ import java.util.*
 // *********
 @InitiatingFlow
 @StartableByRPC
-class OriginateAssetFlowInitiator(val data: String,
-                                  val owner: Party,
-                                  val type: String,
-                                  val longitude: Float,
-                                  val latitude: Float,
-                                  val beneficiary: Party,
-                                  val amount: Long,
-                                  val currency: String) : FlowLogic<SignedTransaction>() {
+class OriginateAssetFlowInitiator(val assetContainer: AssetContainerProperties,
+                                  val gps: GpsProperties,
+                                  val obligation: ObligationProperties) : FlowLogic<SignedTransaction>() {
     override val progressTracker = ProgressTracker()
 
     @Suspendable
@@ -42,14 +33,13 @@ class OriginateAssetFlowInitiator(val data: String,
 
         //create state and additional data for child states
         val dts = Instant.now()
-        val assetState = AssetState(data, owner, type, dts)
-        val amountItem = Amount(amount.toLong() * 100, Currency.getInstance(currency))
-        val gps = Gps(longitude, latitude)
+        val assetState = AssetContainerState(assetContainer)
 
 
         // Step 2. Create a new issue command.
         // Remember that a command is a CommandData object and a list of CompositeKeys
-        val issueCommand = Command(TemplateContract.Commands.Issue(), listOf(owner.owningKey, beneficiary.owningKey))
+        val issueCommand = Command(TemplateContract.Commands.Issue(),
+                listOf(assetContainer.owner.owningKey, obligation.beneficiary.owningKey))
 
         // Step 3. Create a new TransactionBuilder object.
         val builder = TransactionBuilder(notary = notary)
@@ -59,8 +49,8 @@ class OriginateAssetFlowInitiator(val data: String,
 
 
         // Create child states
-        val locationState = LocationState(gps, listOf(owner), assetState.linearId)
-        val obligationState = ObligationState(assetState.owner, beneficiary, amountItem, assetState.linearId)
+        val locationState = LocationState(gps, listOf(assetContainer.owner), assetState.linearId)
+        val obligationState = ObligationState(obligation, assetState.linearId)
 
         builder.addOutputState(locationState, TemplateContract.ID)
         builder.addOutputState(obligationState, TemplateContract.ID)
@@ -72,14 +62,15 @@ class OriginateAssetFlowInitiator(val data: String,
 
         // Stage 6. Collect signature and add it to the transaction.
         // This also verifies the transaction and checks the signatures.
-        val sessions = listOf(initiateFlow(beneficiary))
+        val sessions = listOf(initiateFlow(obligation.beneficiary))
         val stx = subFlow(CollectSignaturesFlow(ptx, sessions))
 
         // Stage 9. Notarise and record the transaction in our vaults.
         val notarizedTx= subFlow(FinalityFlow(stx, sessions))
 
-        // Stage 10 cashe data in firebase
-        FirebaseRepository().cacheAsset(assetState.linearId.toString(), data, owner.toString(), type, dts, latitude, longitude)
+        // Stage 10 cache data into firebase
+        FirebaseRepository().cacheAsset(assetState.linearId.toString(),
+                assetContainer.data, assetContainer.owner.toString(), assetContainer.type, dts, gps.latitude, gps.longitude)
 
         return notarizedTx
     }

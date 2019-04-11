@@ -3,8 +3,8 @@ package com.template.flows
 import agriledger.twinkle.firebase.FirebaseRepository
 import co.paralleluniverse.fibers.Suspendable
 import com.template.contracts.TemplateContract
-import com.template.states.AssetState
-import com.template.states.Gps
+import com.template.states.AssetContainerState
+import com.template.states.GpsProperties
 import com.template.states.LocationState
 import com.template.states.ObligationState
 import net.corda.core.contracts.*
@@ -21,27 +21,25 @@ import net.corda.core.utilities.ProgressTracker
 @InitiatingFlow
 @StartableByRPC
 class MoveFlowInitiator(val linearId: UniqueIdentifier,
-                        val longitude: Float,
-                        val latitude: Float) : FlowLogic<SignedTransaction>() {
+                        val gps: GpsProperties) : FlowLogic<SignedTransaction>() {
     override val progressTracker = ProgressTracker()
 
     @Suspendable
     override fun call(): SignedTransaction {
         // Stage 1. Retrieve States specified by linearId from the vault.
         val queryCriteria = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(linearId))
-        val assetStateAndRef =  serviceHub.vaultService.queryBy<AssetState>(queryCriteria).states.single()
+        val assetStateAndRef =  serviceHub.vaultService.queryBy<AssetContainerState>(queryCriteria).states.single()
         val inputAsset = assetStateAndRef.state.data
         val locationStateAndRef =  serviceHub.vaultService.queryBy<LocationState>(queryCriteria).states.single()
         val inputLocation = locationStateAndRef.state.data
         val inputObligation =  serviceHub.vaultService.queryBy<ObligationState>(queryCriteria).states.single().state.data
 
         // Stage 2. Create the new Parent and Child state reflecting a new gps.
-        val gps = Gps(longitude, latitude)
         val outputLocation = inputLocation.withNewGps(gps)
 
 
         // Stage 3. Create the transfer command.
-        val signers = listOf(inputAsset.owner.owningKey)
+        val signers = listOf(inputAsset.assetContainer.owner.owningKey)
         val transferCommand = Command(TemplateContract.Commands.Transfer(), signers)
 
         // Stage 4. Get a reference to a transaction builder.
@@ -60,14 +58,14 @@ class MoveFlowInitiator(val linearId: UniqueIdentifier,
 
         // Stage 7. Collect signature and add it to the transaction.
         // This also verifies the transaction and checks the signatures.
-        val sessions = listOf(initiateFlow(inputObligation.beneficiary))
+        val sessions = listOf(initiateFlow(inputObligation.obligation.beneficiary))
         val stx = subFlow(CollectSignaturesFlow(ptx, sessions))
 
         // Stage 8. Notarise and record the transaction in our vaults.
         val norarizedTx = subFlow(FinalityFlow(stx, sessions))
 
         // Stage 9 cashe data in firebase
-        FirebaseRepository().cacheMove(linearId.toString(), latitude, longitude)
+        FirebaseRepository().cacheMove(linearId.toString(), gps.latitude, gps.longitude)
 
         return norarizedTx
     }
