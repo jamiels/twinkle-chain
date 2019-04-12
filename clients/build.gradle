@@ -23,6 +23,17 @@ dependencies {
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+    
+    //h2 console
+    compile "com.h2database:h2:$h2_version"
+    
+    //swagger
+    compile("io.springfox:springfox-swagger2:2.9.2") {
+        exclude module: 'swagger-annotations'
+        exclude module: 'swagger-models'
+    }
+    compile("io.swagger:swagger-annotations:1.5.21")
+    compile("io.swagger:swagger-models:1.5.21")
 }
 
 

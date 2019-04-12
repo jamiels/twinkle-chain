@@ -33,6 +33,7 @@ class AssetController(val service: NodeService) {
         private val logger = LoggerFactory.getLogger(RestController::class.java)
     }
 
+
     @PostMapping("create")
     fun createAsset(@RequestBody assetData: AssetContainerData): ResponseEntity<String> {
         val flowFuture = service.proxy.startFlow(::OriginateAssetFlowInitiator,
@@ -42,6 +43,7 @@ class AssetController(val service: NodeService) {
         return executeTx(flowFuture)
     }
 
+
     @PostMapping("move")
     fun moveAsset(@RequestBody moveData: MoveData): ResponseEntity<String> {
         val flowFuture = service.proxy.startFlow(::MoveFlowInitiator,
@@ -50,9 +52,11 @@ class AssetController(val service: NodeService) {
         return executeTx(flowFuture)
     }
 
+
     @GetMapping
     fun getAssets() = service.proxy.vaultQueryBy<AssetContainerState>(QueryCriteria.VaultQueryCriteria()).
             states.map { it.state.data }
+
 
     @GetMapping("trace")
     fun geAssetTrace(linearId: String) =
@@ -60,6 +64,25 @@ class AssetController(val service: NodeService) {
                     linearId = listOf(UniqueIdentifier.fromString(linearId)),
                     status = Vault.StateStatus.ALL))
                     .states.map { it.state.data }
+
+
+    @GetMapping("trace-status")
+    fun geAssetTraceStatus(linearId: String): ResponseEntity<List<StateAndStatus>> {
+        val vaultTrace = service.proxy.vaultQueryBy<LocationState>(QueryCriteria.LinearStateQueryCriteria(
+                linearId = listOf(UniqueIdentifier.fromString(linearId)),
+                status = Vault.StateStatus.ALL))
+        val statesAndStatuses = mutableListOf<StateAndStatus>()
+        val states = vaultTrace.states.iterator()
+        val statesMetadata = vaultTrace.statesMetadata.iterator()
+        while (states.hasNext() && statesMetadata.hasNext()){
+            val state = states.next()
+            val stateMetadata = statesMetadata.next()
+            statesAndStatuses.add(StateAndStatus(state.ref.txhash.toString(), state.state.data, stateMetadata.status))
+        }
+        return ResponseEntity.ok().body(statesAndStatuses)
+    }
+
+    data class StateAndStatus(val tx: String, val state: ContractState, val status: Vault.StateStatus)
 
 
     private fun executeTx(flowFuture: CordaFuture<SignedTransaction>): ResponseEntity<String> {
@@ -71,8 +94,10 @@ class AssetController(val service: NodeService) {
         return ResponseEntity.ok("Transaction id ${result.tx.id} committed to ledger.")
         }
 
+
     @PostConstruct
     private fun subscribeAssetUpdate() = subscribObservable(AssetContainerState::class.java)
+
 
     @PostConstruct
     private fun subscribeAssetMoveUpdate() = subscribObservable(LocationState::class.java)
