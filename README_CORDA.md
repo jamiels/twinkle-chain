@@ -102,7 +102,7 @@ allows you to interact with the node over HTTP.
 
 The API endpoints are defined here:
 
-     clients/src/main/kotlin/com/template/webserver/Controller.kt
+     clients/src/main/kotlin/com/template/webserver/AssetController.kt
 
 And a static webpage is defined here:
 

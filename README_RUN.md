@@ -13,7 +13,7 @@ flow start OriginateAssetFlowInitiator assetContainer: {data: extra fresh, owner
 
 or Run webserver and for example
 POST
-http://localhost:12223/create-asset
+http://localhost:12223/asset/create
 body
 {
 	"data": "fruit",
