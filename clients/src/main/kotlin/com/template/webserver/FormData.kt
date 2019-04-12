@@ -38,9 +38,10 @@ data class AssetContainerData(
     )
 }
 
-data class GpsData(
+data class MoveData(
         val longitude: Float,
-        val latitude: Float){
+        val latitude: Float,
+        val linearId: String){
 
     fun toGpsProperties() = GpsProperties(
             longitude = longitude,
