@@ -1,4 +1,4 @@
-group 'com.template'
+group 'twinkle.agriledger'
 version '0.1'
 
 sourceCompatibility = 1.8
