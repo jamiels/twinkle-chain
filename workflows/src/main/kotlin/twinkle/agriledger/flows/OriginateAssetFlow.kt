@@ -2,7 +2,7 @@ package twinkle.agriledger.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import twinkle.agriledger.contracts.TemplateContract
-import agriledger.twinkle.firebase.FirebaseRepository
+//import agriledger.twinkle.firebase.FirebaseRepository
 import twinkle.agriledger.states.*
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
@@ -67,8 +67,9 @@ class OriginateAssetFlowInitiator(val assetContainer: AssetContainerProperties,
         val notarizedTx= subFlow(FinalityFlow(stx, sessions))
 
         // Stage 10 cache data into firebase
-        FirebaseRepository().cacheAsset(assetState.linearId.toString(),
-                assetContainer.data, assetContainer.owner.toString(), assetContainer.type, dts, gps.latitude, gps.longitude)
+        //Todo clean this do to cache moved to observable
+//        FirebaseRepository().cacheAsset(assetState.linearId.toString(),
+//                assetContainer.data, assetContainer.owner.toString(), assetContainer.type, dts, gps.latitude, gps.longitude)
 
         return notarizedTx
     }

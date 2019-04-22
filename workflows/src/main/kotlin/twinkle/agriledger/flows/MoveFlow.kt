@@ -1,6 +1,6 @@
 package twinkle.agriledger.flows
 
-import agriledger.twinkle.firebase.FirebaseRepository
+//import agriledger.twinkle.firebase.FirebaseRepository
 import co.paralleluniverse.fibers.Suspendable
 import twinkle.agriledger.contracts.TemplateContract
 import twinkle.agriledger.states.AssetContainerState
@@ -65,7 +65,8 @@ class MoveFlowInitiator(val linearId: UniqueIdentifier,
         val norarizedTx = subFlow(FinalityFlow(stx, sessions))
 
         // Stage 9 cashe data in firebase
-        FirebaseRepository().cacheMove(linearId.toString(), gps.latitude, gps.longitude)
+        //Todo clean this do to cache moved to observable
+        //FirebaseRepository().cacheMove(linearId.toString(), gps.latitude, gps.longitude)
 
         return norarizedTx
     }

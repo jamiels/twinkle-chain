@@ -18,6 +18,7 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import org.springframework.web.bind.annotation.*
+import twinkle.agriledger.webserver.servises.FirebaseService
 import java.util.concurrent.CountDownLatch
 import javax.annotation.PostConstruct
 import kotlin.concurrent.thread
@@ -54,8 +55,7 @@ class AssetController(val service: NodeService) {
 
 
     @GetMapping
-    fun getAssets() = service.proxy.vaultQueryBy<AssetContainerState>(QueryCriteria.VaultQueryCriteria()).
-            states.map { it.state.data }
+    fun getAssets() = service.proxy.vaultQueryBy<AssetContainerState>(QueryCriteria.VaultQueryCriteria()).states.map { it.state.data }
 
 
     @GetMapping("trace")
@@ -74,7 +74,7 @@ class AssetController(val service: NodeService) {
         val statesAndStatuses = mutableListOf<StateAndStatus>()
         val states = vaultTrace.states.iterator()
         val statesMetadata = vaultTrace.statesMetadata.iterator()
-        while (states.hasNext() && statesMetadata.hasNext()){
+        while (states.hasNext() && statesMetadata.hasNext()) {
             val state = states.next()
             val stateMetadata = statesMetadata.next()
             statesAndStatuses.add(StateAndStatus(state.ref.txhash.toString(), state.state.data, stateMetadata.status))
@@ -92,7 +92,7 @@ class AssetController(val service: NodeService) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.message)
         }
         return ResponseEntity.ok("Transaction id ${result.tx.id} committed to ledger.")
-        }
+    }
 
 
     @PostConstruct
@@ -114,10 +114,19 @@ class AssetController(val service: NodeService) {
             fun subscribeObservable(){
                 updates.toBlocking().subscribe { newAsset ->
                     newAsset.produced.forEach {
-                        when (contractStateType){
-                            AssetContainerState::class.java -> println("new asset created: ${it.state.data}")
-                            LocationState::class.java -> println("asset moved: ${it.state.data}")
-                            else -> println("some updates: ${it.state.data}")
+                        val contractState = it.state.data
+                        when (contractState){
+                            is AssetContainerState -> {
+                                // cache new asset data into firebase
+                                FirebaseService().cacheAsset(contractState.linearId.toString(),
+                                        contractState.assetContainer)
+                                println("new asset created: $contractState")
+                            }
+                            is LocationState -> {
+                                FirebaseService().cacheMove(contractState.linearId.toString(), contractState.gps)
+                                println("asset moved: ${contractState}")
+                            }
+                            else -> println("some updates: ${contractState}")
                         }
 
                     }
@@ -128,7 +137,5 @@ class AssetController(val service: NodeService) {
         }
         countDownLatch.await()
     }
-
-
 
 }

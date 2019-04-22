@@ -11,9 +11,9 @@ cordapp {
         licence "Apache License, Version 2.0"
         versionId 1
     }
-    signing {
-        enabled false
-    }
+//    signing {
+//        enabled false
+//    }
 }
 
 sourceSets {
@@ -57,7 +57,7 @@ dependencies {
 
     // CorDapp dependencies.
     cordapp project(":contracts")
-    compile project(":service")
+    //compile project(":service")
 }
 
 task integrationTest(type: Test, dependsOn: []) {
