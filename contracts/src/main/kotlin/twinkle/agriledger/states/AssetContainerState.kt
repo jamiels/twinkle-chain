@@ -24,6 +24,14 @@ data class AssetContainerState(val assetContainer: AssetContainerProperties,
 @CordaSerializable
 data class AssetContainerProperties(val data: String,
                                     val owner: Party,
+                                    val producerID: Int,
                                     val type: String,
                                     val dts: Instant = Instant.now())
+
+@CordaSerializable
+enum class ProductTypeEnum {
+    MANGO,
+    AVOCADO,
+    PINEAPPLE
+}
 

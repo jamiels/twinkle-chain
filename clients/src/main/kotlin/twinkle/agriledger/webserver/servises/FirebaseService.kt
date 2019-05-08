@@ -31,14 +31,18 @@ class FirebaseService{
         private var firebasDatabase: FirebaseDatabase? = null
     }
 
-    fun cacheAsset(linearId: String,
-                   assetContainer: AssetContainerProperties){
-
-        val assetToCache = AssetToCache(assetContainer.data, assetContainer.owner.toString(), assetContainer.type, assetContainer.dts)
+    fun cacheAsset(linearId: String, assetContainer: AssetContainerProperties){
+        val assetToCache = AssetToCache(
+                assetContainer.data,
+                assetContainer.producerID,
+                assetContainer.owner.toString(),
+                assetContainer.type,
+                assetContainer.dts)
         save(keysPath = "/asset/$linearId", value = assetToCache)
     }
 
     data class AssetToCache(val data: String,
+                            val producerID: Int,
                             val owner: String,
                             val type: String,
                             val dts: Instant)
@@ -81,11 +85,11 @@ class FirebaseService{
     private fun getFirebaseDb(): FirebaseDatabase? {
         if (firebasDatabase == null) { // init firebase
 
-            val serviceAccount = ClassPathResource("agriledger-893ec-firebase-adminsdk-p44mc-a2be295afe.json").getInputStream()
+            val serviceAccount = ClassPathResource("transactionscache-firebase-adminsdk-51vb7-987ea9e7b2.json").getInputStream()
 
             val options = FirebaseOptions.Builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .setDatabaseUrl("https://agriledger-893ec.firebaseio.com/")
+                    .setDatabaseUrl("https://transactionscache.firebaseio.com")
                     .build()
 
             try {
@@ -103,13 +107,6 @@ class FirebaseService{
         return firebasDatabase
     }
 
-    data class Asset(val data: String,
-                     val owner: String,
-                     val type: String,
-                     val dts: Instant)
-
-    data class Gps(val longitude: Float,
-                   val latitude: Float)
 
 
 

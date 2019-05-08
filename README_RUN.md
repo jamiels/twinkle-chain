@@ -18,6 +18,7 @@ body
 {
 	"data": "fruit",
     "owner": "O=PartyA,L=London,C=GB",
+    "producerID": 1,
     "type": "excelent",
     "longitude": 23,
     "latitude": 23,

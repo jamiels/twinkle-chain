@@ -14,6 +14,7 @@ import java.util.*
 data class AssetContainerData(
         val data: String,
         val owner: String,
+        val producerID: Int,
         val type: String,
         val longitude: Float,
         val latitude: Float,
@@ -22,6 +23,7 @@ data class AssetContainerData(
 
     fun toAssetContainerProperties(proxy: CordaRPCOps) = AssetContainerProperties(
             data = data,
+            producerID = producerID,
             owner = partyFromString(owner, proxy),
             type = type,
             dts = Instant.now()
