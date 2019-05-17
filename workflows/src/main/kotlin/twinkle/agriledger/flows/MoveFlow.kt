@@ -37,9 +37,8 @@ class MoveFlowInitiator(val linearId: UniqueIdentifier,
         // Stage 2. Create the new Parent and Child state reflecting a new gps.
         val outputLocation = inputLocation.withNewGps(gps)
 
-
         // Stage 3. Create the transfer command.
-        val signers = listOf(inputAsset.assetContainer.owner.owningKey)
+        val signers = inputAsset.participants.map { it.owningKey }
         val transferCommand = Command(TemplateContract.Commands.Transfer(), signers)
 
         // Stage 4. Get a reference to a transaction builder.
@@ -58,7 +57,12 @@ class MoveFlowInitiator(val linearId: UniqueIdentifier,
 
         // Stage 7. Collect signature and add it to the transaction.
         // This also verifies the transaction and checks the signatures.
-        val sessions = listOf(initiateFlow(inputObligation.obligation.beneficiary))
+        val counterparty = if (serviceHub.myInfo.legalIdentities.first() == inputObligation.obligation.beneficiary){
+            inputObligation.obligation.owner
+        } else {
+            inputObligation.obligation.beneficiary
+        }
+        val sessions = listOf(initiateFlow(counterparty))
         val stx = subFlow(CollectSignaturesFlow(ptx, sessions))
 
         // Stage 8. Notarise and record the transaction in our vaults.

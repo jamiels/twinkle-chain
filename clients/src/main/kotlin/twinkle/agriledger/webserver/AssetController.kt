@@ -15,10 +15,14 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import org.springframework.web.bind.annotation.*
+import twinkle.agriledger.states.ObligationState
 import twinkle.agriledger.webserver.servises.FirebaseService
+import java.time.Instant
 import java.util.concurrent.CountDownLatch
 import javax.annotation.PostConstruct
 import kotlin.concurrent.thread
@@ -37,6 +41,9 @@ class AssetController(val service: NodeService) {
 
     @PostMapping("create")
     fun createAsset(@RequestBody assetData: AssetContainerData): ResponseEntity<String> {
+        val assetDats = if (assetData.owner == null){
+            assetData.copy(owner = service.whoami().get("me").toString(), beneficiary = service.beneficiary().toString())
+        } else assetData
         val flowFuture = service.proxy.startFlow(::OriginateAssetFlowInitiator,
                 assetData.toAssetContainerProperties(service.proxy),
                 assetData.toGpsProperties(),
@@ -55,7 +62,11 @@ class AssetController(val service: NodeService) {
 
 
     @GetMapping
-    fun getAssets() = service.proxy.vaultQueryBy<AssetContainerState>(QueryCriteria.VaultQueryCriteria()).states.map { it.state.data }
+    fun getAssets(): List<AssetContainerState> {
+        val sortAttribute = SortAttribute.Standard(Sort.VaultStateAttribute.RECORDED_TIME)
+        val sort = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.DESC)))
+        return service.proxy.vaultQueryBy<AssetContainerState>(sorting = sort).states.map { it.state.data }
+    }
 
 
     @GetMapping("trace")
@@ -65,24 +76,30 @@ class AssetController(val service: NodeService) {
                     status = Vault.StateStatus.ALL))
                     .states.map { it.state.data }
 
-
     @GetMapping("trace-status")
-    fun geAssetTraceStatus(linearId: String): ResponseEntity<List<StateAndStatus>> {
-        val vaultTrace = service.proxy.vaultQueryBy<LocationState>(QueryCriteria.LinearStateQueryCriteria(
+    fun geAssetTraceStatus(@RequestParam linearId: String) = geStateAndStatus(linearId, LocationState::class.java)
+
+
+    @GetMapping("obligation-status")
+    fun geAssetObligationStatus(@RequestParam linearId: String) = geStateAndStatus(linearId, ObligationState::class.java)
+
+
+    private fun <T : ContractState>geStateAndStatus(linearId: String, contractState: Class<out T>): ResponseEntity<List<StateAndStatus>> {
+        val vaultTrace = service.proxy.vaultQueryByCriteria(QueryCriteria.LinearStateQueryCriteria(
                 linearId = listOf(UniqueIdentifier.fromString(linearId)),
-                status = Vault.StateStatus.ALL))
+                status = Vault.StateStatus.ALL), contractState)
         val statesAndStatuses = mutableListOf<StateAndStatus>()
         val states = vaultTrace.states.iterator()
         val statesMetadata = vaultTrace.statesMetadata.iterator()
         while (states.hasNext() && statesMetadata.hasNext()) {
             val state = states.next()
             val stateMetadata = statesMetadata.next()
-            statesAndStatuses.add(StateAndStatus(state.ref.txhash.toString(), state.state.data, stateMetadata.status))
+            statesAndStatuses.add(StateAndStatus(state.ref.txhash.toString(), state.state.data, stateMetadata.status, stateMetadata.recordedTime))
         }
         return ResponseEntity.ok().body(statesAndStatuses)
     }
 
-    data class StateAndStatus(val tx: String, val state: ContractState, val status: Vault.StateStatus)
+    data class StateAndStatus(val tx: String, val state: ContractState, val status: Vault.StateStatus, val recordedTime: Instant)
 
 
     private fun executeTx(flowFuture: CordaFuture<SignedTransaction>): ResponseEntity<String> {
@@ -111,11 +128,11 @@ class AssetController(val service: NodeService) {
             val updates = updates
             countDownLatch.countDown()
 
-            fun subscribeObservable(){
+            fun subscribeObservable() {
                 updates.toBlocking().subscribe { newAsset ->
                     newAsset.produced.forEach {
                         val contractState = it.state.data
-                        when (contractState){
+                        when (contractState) {
                             is AssetContainerState -> {
                                 // cache new asset data into firebase
                                 FirebaseService().cacheAsset(contractState.linearId.toString(),
@@ -137,5 +154,5 @@ class AssetController(val service: NodeService) {
         }
         countDownLatch.await()
     }
-
 }
+

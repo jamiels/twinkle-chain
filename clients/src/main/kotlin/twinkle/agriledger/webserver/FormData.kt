@@ -4,6 +4,7 @@ import twinkle.agriledger.states.AssetContainerProperties
 import twinkle.agriledger.states.GpsProperties
 import twinkle.agriledger.states.ObligationProperties
 import net.corda.core.contracts.Amount
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
@@ -12,20 +13,20 @@ import java.util.*
 
 
 data class AssetContainerData(
-        val data: String,
-        val owner: String,
+        val owner: String? = null,
         val producerID: Int,
         val type: String,
+        val physicalContainerID: String,
         val longitude: Float,
         val latitude: Float,
-        val beneficiary: String,
+        val beneficiary: String? = null,
         val amount: Long){
 
     fun toAssetContainerProperties(proxy: CordaRPCOps) = AssetContainerProperties(
-            data = data,
             producerID = producerID,
-            owner = partyFromString(owner, proxy),
+            owner = partyFromString(owner!!, proxy),
             type = type,
+            physicalContainerID = UniqueIdentifier(id = UUID.fromString(physicalContainerID)),
             dts = Instant.now()
     )
 
@@ -34,8 +35,8 @@ data class AssetContainerData(
             latitude = latitude)
 
     fun  toObligationProperties(proxy: CordaRPCOps) = ObligationProperties(
-            owner = partyFromString(owner, proxy),
-            beneficiary = partyFromString(beneficiary, proxy),
+            owner = partyFromString(owner!!, proxy),
+            beneficiary = partyFromString(beneficiary!!, proxy),
             amount = Amount(amount * 100, Currency.getInstance("USD"))
     )
 }

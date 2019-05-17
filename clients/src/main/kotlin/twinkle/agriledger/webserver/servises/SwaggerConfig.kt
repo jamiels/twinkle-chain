@@ -1,6 +1,5 @@
 package twinkle.agriledger.webserver.servises
 
-import com.google.common.collect.Lists
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import springfox.documentation.builders.PathSelectors
@@ -21,4 +20,6 @@ open class SwaggerConfig {
                 .paths(PathSelectors.any())
                 .build()
     }
+
+
 }

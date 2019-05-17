@@ -14,7 +14,7 @@ import java.util.*
 data class ObligationState(//val asset: StaticPointer<AssetContainerState>,
         val obligation: ObligationProperties,
         override val linearId: UniqueIdentifier) : LinearState{
-    override val participants: List<AbstractParty> = listOf(obligation.owner)
+    override val participants: List<AbstractParty> = listOf(obligation.owner, obligation.beneficiary)
 }
 
 @CordaSerializable

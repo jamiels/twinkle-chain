@@ -17,21 +17,16 @@ import java.time.Instant
 @BelongsToContract(TemplateContract::class)
 data class AssetContainerState(val assetContainer: AssetContainerProperties,
                                override val linearId: UniqueIdentifier = UniqueIdentifier(),
-                               val linearIdHash: SecureHash = SecureHash.sha256(linearId.toString())) : LinearState {
-    override val participants: List<AbstractParty> = listOf(assetContainer.owner)
+                               val linearIdHash: SecureHash = SecureHash.sha256(linearId.toString()),
+                               override val participants: List<AbstractParty> = listOf()) : LinearState {
+
 }
 
 @CordaSerializable
-data class AssetContainerProperties(val data: String,
-                                    val owner: Party,
+data class AssetContainerProperties(val owner: Party,
                                     val producerID: Int,
                                     val type: String,
+                                    val physicalContainerID: UniqueIdentifier,
                                     val dts: Instant = Instant.now())
 
-@CordaSerializable
-enum class ProductTypeEnum {
-    MANGO,
-    AVOCADO,
-    PINEAPPLE
-}
 

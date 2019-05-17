@@ -27,17 +27,17 @@ class OriginateAssetFlowInitiator(val assetContainer: AssetContainerProperties,
         // Step 1. Get a reference to the notary service on our network and our key pair.
         // Note: ongoing work to support multiple notary identities is still in progress.
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
-
+        val participants = listOf(assetContainer.owner, obligation.beneficiary)
 
         //create state and additional data for child states
         val dts = Instant.now()
-        val assetState = AssetContainerState(assetContainer)
+        val assetState = AssetContainerState(assetContainer, participants = participants)
 
 
         // Step 2. Create a new issue command.
         // Remember that a command is a CommandData object and a list of CompositeKeys
         val issueCommand = Command(TemplateContract.Commands.Issue(),
-                listOf(assetContainer.owner.owningKey, obligation.beneficiary.owningKey))
+                participants.map { it.owningKey })
 
         // Step 3. Create a new TransactionBuilder object.
         val builder = TransactionBuilder(notary = notary)
@@ -47,7 +47,7 @@ class OriginateAssetFlowInitiator(val assetContainer: AssetContainerProperties,
 
 
         // Create child states
-        val locationState = LocationState(gps, listOf(assetContainer.owner), assetState.linearId)
+        val locationState = LocationState(gps, participants, assetState.linearId)
         val obligationState = ObligationState(obligation, assetState.linearId)
 
         builder.addOutputState(locationState, TemplateContract.ID)

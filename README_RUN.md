@@ -10,16 +10,16 @@ Start the nodes by running the following command from the root of the cordapp-ex
 step 1 
 Originate Asset
 - Console:
-flow start OriginateAssetFlowInitiator assetContainer: {data: extra fresh, owner: PartyA, type: a lot of mango}, gps: {longitude: 10, latitude: 20}, obligation: {owner: PartyA, beneficiary: PartyB, amount: $100}
+flow start OriginateAssetFlowInitiator assetContainer: {owner: PartyA, type: mango, producerID: 1, physicalContainerID: 2efeb496-f049-4fbd-934f-81e6c200a1aa}, gps: {longitude: 10, latitude: 20}, obligation: {owner: PartyA, beneficiary: PartyB, amount: $100}
 - Webserver
 POST
 http://localhost:12223/asset/create
 body
 {
-	"data": "fruit",
     "owner": "O=PartyA,L=London,C=GB",
     "producerID": 1,
-    "type": "excelent",
+    "physicalContainerID": "2efeb496-f049-4fbd-934f-81e6c200a1aa",
+    "type": "mango",
     "longitude": 23,
     "latitude": 23,
     "beneficiary": "O=PartyB,L=New York,C=US",
@@ -29,9 +29,9 @@ body
 step 2
 check states
 - Console:
-run vaultQuery contractStateType: com.template.states.AssetContainerState
-run vaultQuery contractStateType: com.template.states.LocationState
-run vaultQuery contractStateType: com.template.states.ObligationState
+run vaultQuery contractStateType: twinkle.agriledger.states.AssetContainerState
+run vaultQuery contractStateType: twinkle.agriledger.states.LocationState
+run vaultQuery contractStateType: twinkle.agriledger.states.ObligationState
 - Webserver
 GET 
 http://localhost:12223/asset/
@@ -41,7 +41,7 @@ take linear id from one of the state and put it into move flow
 step 3
 Transfer fruits
 - Console
-flow start MoveFlowInitiator linearId: 1028e3ba-525f-4c28-b56a-a7e06a691a13, longitude: 25.5, latitude: 55.5
+flow start MoveFlowInitiator linearId: 5816bbe7-82f5-4cf4-b896-8ebdc3d4d3de, gps: {longitude: 78, latitude: 77}
 - Webserver
 POST 
 http://localhost:12223/asset/move

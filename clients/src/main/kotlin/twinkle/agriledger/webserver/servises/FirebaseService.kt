@@ -33,16 +33,16 @@ class FirebaseService{
 
     fun cacheAsset(linearId: String, assetContainer: AssetContainerProperties){
         val assetToCache = AssetToCache(
-                assetContainer.data,
                 assetContainer.producerID,
+                assetContainer.physicalContainerID.toString(),
                 assetContainer.owner.toString(),
                 assetContainer.type,
                 assetContainer.dts)
         save(keysPath = "/asset/$linearId", value = assetToCache)
     }
 
-    data class AssetToCache(val data: String,
-                            val producerID: Int,
+    data class AssetToCache(val producerID: Int,
+                            val physicalContainerID: String,
                             val owner: String,
                             val type: String,
                             val dts: Instant)

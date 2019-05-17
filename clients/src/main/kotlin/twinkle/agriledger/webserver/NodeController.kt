@@ -32,13 +32,13 @@ import kotlin.concurrent.thread
 class NodeController(val service: NodeService) {
 
     @GetMapping("me")
-    fun whoami() = service.whoami()
+    fun whoami() = service.whoami().map { it.value.toString() }
 
     /**
      * Returns all parties registered with the network map.
      */
     @GetMapping("peers")
-    fun getPeers() = service.getPeers()
+    fun getPeers() = service.getPeers().map { it.value.map { its -> its.toString() } }
 
     @GetMapping("vault")
     fun getVault(): Pair<List<StateAndRef<ContractState>>, List<StateAndRef<ContractState>>> {
