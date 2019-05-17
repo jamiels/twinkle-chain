@@ -26,7 +26,7 @@ data class AssetContainerData(
             producerID = producerID,
             owner = partyFromString(owner!!, proxy),
             type = type,
-            physicalContainerID = UniqueIdentifier(id = UUID.fromString(physicalContainerID)),
+            physicalContainerID = UUID.fromString(physicalContainerID),
             dts = Instant.now()
     )
 

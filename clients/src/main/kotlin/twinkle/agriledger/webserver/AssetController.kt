@@ -41,7 +41,7 @@ class AssetController(val service: NodeService) {
 
     @PostMapping("create")
     fun createAsset(@RequestBody assetData: AssetContainerData): ResponseEntity<String> {
-        val assetDats = if (assetData.owner == null){
+        val assetData = if (assetData.owner == null){
             assetData.copy(owner = service.whoami().get("me").toString(), beneficiary = service.beneficiary().toString())
         } else assetData
         val flowFuture = service.proxy.startFlow(::OriginateAssetFlowInitiator,
@@ -72,8 +72,7 @@ class AssetController(val service: NodeService) {
     @GetMapping("trace")
     fun geAssetTrace(linearId: String) =
             service.proxy.vaultQueryBy<LocationState>(QueryCriteria.LinearStateQueryCriteria(
-                    linearId = listOf(UniqueIdentifier.fromString(linearId)),
-                    status = Vault.StateStatus.ALL))
+                    linearId = listOf(UniqueIdentifier.fromString(linearId))))
                     .states.map { it.state.data }
 
     @GetMapping("trace-status")

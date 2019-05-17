@@ -25,12 +25,11 @@ class NodeService(rpc: NodeRPCConnection){
                 .filter { it !in listOf(myLegalName) })
     }
 
-    fun beneficiary(){
-        val nodeInfo = proxy.networkMapSnapshot()
+    fun beneficiary() = proxy.networkMapSnapshot()
                 .map { it.legalIdentities.first().name }
                 .filter { it !in listOf(myLegalName) && it.organisation != "Notary" }.first()
 
-    }
+
 
 
 }

@@ -9,26 +9,46 @@ import twinkle.agriledger.states.LocationState
 import twinkle.agriledger.states.ObligationState
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
+import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.Builder.equal
+import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import twinkle.agriledger.schema.AssetContainerSchemaV1
+import java.util.*
 
 // *********
 // * Flows *
 // *********
 @InitiatingFlow
 @StartableByRPC
-class MoveFlowInitiator(val linearId: UniqueIdentifier,
+class MoveFlowInitiator(val physicalContainerID: String,
                         val gps: GpsProperties) : FlowLogic<SignedTransaction>() {
     override val progressTracker = ProgressTracker()
 
     @Suspendable
     override fun call(): SignedTransaction {
         // Stage 1. Retrieve States specified by linearId from the vault.
+        val physicalContainerUUID = UUID.fromString(physicalContainerID)
+
+        val generalCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL)
+        val assetStateAndRef = builder {
+            val schemaIndex =
+                    AssetContainerSchemaV1.PersistentAssetContainer::physicalContainerID.equal(physicalContainerUUID)
+            val customCriteria = QueryCriteria.VaultCustomQueryCriteria(schemaIndex)
+            val criteria = generalCriteria.and(customCriteria)
+            val pageSpecification = PageSpecification(1, Int.MAX_VALUE-1)
+            serviceHub.vaultService.queryBy<AssetContainerState>(criteria = criteria, paging = pageSpecification).states.single()
+        }
+
+        val linearId = assetStateAndRef.state.data.linearId
+
         val queryCriteria = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(linearId))
-        val assetStateAndRef =  serviceHub.vaultService.queryBy<AssetContainerState>(queryCriteria).states.single()
+        //val assetStateAndRef =  serviceHub.vaultService.queryBy<AssetContainerState>(queryCriteria).states.single()
         val inputAsset = assetStateAndRef.state.data
         val locationStateAndRef =  serviceHub.vaultService.queryBy<LocationState>(queryCriteria).states.single()
         val inputLocation = locationStateAndRef.state.data

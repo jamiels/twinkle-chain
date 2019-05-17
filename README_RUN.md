@@ -41,7 +41,7 @@ take linear id from one of the state and put it into move flow
 step 3
 Transfer fruits
 - Console
-flow start MoveFlowInitiator linearId: 5816bbe7-82f5-4cf4-b896-8ebdc3d4d3de, gps: {longitude: 78, latitude: 77}
+flow start MoveFlowInitiator physicalContainerID: 2efeb496-f049-4fbd-934f-81e6c200a1aa, gps: {longitude: 77, latitude: 77}
 - Webserver
 POST 
 http://localhost:12223/asset/move
