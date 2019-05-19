@@ -55,7 +55,7 @@ class AssetController(val service: NodeService) {
     @PostMapping("move")
     fun moveAsset(@RequestBody moveData: MoveData): ResponseEntity<String> {
         val flowFuture = service.proxy.startFlow(::MoveFlowInitiator,
-                UniqueIdentifier.fromString(moveData.linearId),
+                moveData.physicalContainerID,
                 moveData.toGpsProperties()).returnValue
         return executeTx(flowFuture)
     }

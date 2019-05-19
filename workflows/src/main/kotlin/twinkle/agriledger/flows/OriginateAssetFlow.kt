@@ -1,6 +1,7 @@
 package twinkle.agriledger.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaRuntimeException
 import twinkle.agriledger.contracts.TemplateContract
 //import agriledger.twinkle.firebase.FirebaseRepository
 import twinkle.agriledger.states.*
@@ -9,7 +10,9 @@ import net.corda.core.flows.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import utils.getAssetContainerByPhysicalContainerId
 import java.time.Instant
+import java.util.*
 
 
 // *********
@@ -24,6 +27,13 @@ class OriginateAssetFlowInitiator(val assetContainer: AssetContainerProperties,
 
     @Suspendable
     override fun call(): SignedTransaction {
+        // Check if state with such physicalContainerId exists
+        val assetStateAndRef = getAssetContainerByPhysicalContainerId(assetContainer.physicalContainerID, serviceHub)
+        if (assetStateAndRef != null){
+            throw CordaRuntimeException("state with such physicalContainerID have already existed")
+        }
+
+
         // Step 1. Get a reference to the notary service on our network and our key pair.
         // Note: ongoing work to support multiple notary identities is still in progress.
         val notary = serviceHub.networkMapCache.notaryIdentities.first()

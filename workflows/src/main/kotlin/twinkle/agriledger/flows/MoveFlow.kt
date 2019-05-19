@@ -2,6 +2,7 @@ package twinkle.agriledger.flows
 
 //import agriledger.twinkle.firebase.FirebaseRepository
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaRuntimeException
 import twinkle.agriledger.contracts.TemplateContract
 import twinkle.agriledger.states.AssetContainerState
 import twinkle.agriledger.states.GpsProperties
@@ -19,6 +20,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import twinkle.agriledger.schema.AssetContainerSchemaV1
+import utils.getAssetContainerByPhysicalContainerId
 import java.util.*
 
 // *********
@@ -35,15 +37,8 @@ class MoveFlowInitiator(val physicalContainerID: String,
         // Stage 1. Retrieve States specified by linearId from the vault.
         val physicalContainerUUID = UUID.fromString(physicalContainerID)
 
-        val generalCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL)
-        val assetStateAndRef = builder {
-            val schemaIndex =
-                    AssetContainerSchemaV1.PersistentAssetContainer::physicalContainerID.equal(physicalContainerUUID)
-            val customCriteria = QueryCriteria.VaultCustomQueryCriteria(schemaIndex)
-            val criteria = generalCriteria.and(customCriteria)
-            val pageSpecification = PageSpecification(1, Int.MAX_VALUE-1)
-            serviceHub.vaultService.queryBy<AssetContainerState>(criteria = criteria, paging = pageSpecification).states.single()
-        }
+        val assetStateAndRef = getAssetContainerByPhysicalContainerId(physicalContainerUUID, serviceHub) ?:
+        throw CordaRuntimeException("state with such physicalContainerID does not exists")
 
         val linearId = assetStateAndRef.state.data.linearId
 
