@@ -1,6 +1,6 @@
 package twinkle.agriledger.states
 
-import twinkle.agriledger.contracts.TemplateContract
+import twinkle.agriledger.contracts.AssetContract
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -9,7 +9,7 @@ import net.corda.core.serialization.CordaSerializable
 // *********
 // * State *
 // *********
-@BelongsToContract(TemplateContract::class)
+@BelongsToContract(AssetContract::class)
 data class LocationState(val gps: GpsProperties,
                          val allParticipants: List<Party>,
                          override val linearId: UniqueIdentifier) : LinearState {

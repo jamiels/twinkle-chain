@@ -1,6 +1,6 @@
 package twinkle.agriledger.states
 
-import twinkle.agriledger.contracts.TemplateContract
+import twinkle.agriledger.contracts.AssetContract
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.LinearState
 import net.corda.core.contracts.UniqueIdentifier
@@ -19,7 +19,7 @@ import java.util.*
 // *********
 // * State *
 // *********
-@BelongsToContract(TemplateContract::class)
+@BelongsToContract(AssetContract::class)
 data class AssetContainerState(val assetContainer: AssetContainerProperties,
                                override val linearId: UniqueIdentifier = UniqueIdentifier(),
                                val linearIdHash: SecureHash = SecureHash.sha256(linearId.toString()),

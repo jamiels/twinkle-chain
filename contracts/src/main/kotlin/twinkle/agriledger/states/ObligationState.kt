@@ -1,6 +1,6 @@
 package twinkle.agriledger.states
 
-import twinkle.agriledger.contracts.TemplateContract
+import twinkle.agriledger.contracts.AssetContract
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -10,7 +10,7 @@ import java.util.*
 // *********
 // * State *
 // *********
-@BelongsToContract(TemplateContract::class)
+@BelongsToContract(AssetContract::class)
 data class ObligationState(//val asset: StaticPointer<AssetContainerState>,
         val obligation: ObligationProperties,
         override val linearId: UniqueIdentifier) : LinearState{

@@ -2,24 +2,19 @@ package twinkle.agriledger.flows
 
 //import agriledger.twinkle.firebase.FirebaseRepository
 import co.paralleluniverse.fibers.Suspendable
+import com.heartbeat.StartTransitionCheckFlow
 import net.corda.core.CordaRuntimeException
-import twinkle.agriledger.contracts.TemplateContract
-import twinkle.agriledger.states.AssetContainerState
+import twinkle.agriledger.contracts.AssetContract
 import twinkle.agriledger.states.GpsProperties
 import twinkle.agriledger.states.LocationState
 import twinkle.agriledger.states.ObligationState
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
-import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.vault.Builder.equal
-import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
-import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import twinkle.agriledger.schema.AssetContainerSchemaV1
 import utils.getAssetContainerByPhysicalContainerId
 import java.util.*
 
@@ -54,7 +49,7 @@ class MoveFlowInitiator(val physicalContainerID: String,
 
         // Stage 3. Create the transfer command.
         val signers = inputAsset.participants.map { it.owningKey }
-        val transferCommand = Command(TemplateContract.Commands.Transfer(), signers)
+        val transferCommand = Command(AssetContract.Commands.Transfer(), signers)
 
         // Stage 4. Get a reference to a transaction builder.
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
@@ -63,7 +58,7 @@ class MoveFlowInitiator(val physicalContainerID: String,
         // Stage 5. Create the transaction which comprises inputs, outputs and one command.
         builder.withItems(
                 locationStateAndRef,
-                StateAndContract(outputLocation, TemplateContract.ID),
+                StateAndContract(outputLocation, AssetContract.ID),
                 transferCommand)
 
         // Stage 6. Verify and sign the transaction.
@@ -86,6 +81,9 @@ class MoveFlowInitiator(val physicalContainerID: String,
         // Stage 9 cashe data in firebase
         //Todo clean this do to cache moved to observable
         //FirebaseRepository().cacheMove(linearId.toString(), gps.latitude, gps.longitude)
+
+        // Run transaction check
+        subFlow(StartTransitionCheckFlow(StateRef(stx.tx.id, 0)))
 
         return norarizedTx
     }

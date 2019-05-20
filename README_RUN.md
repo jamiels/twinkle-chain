@@ -18,7 +18,7 @@ body
 {
     "owner": "O=PartyA,L=London,C=GB",
     "producerID": 1,
-    "physicalContainerID": "2efeb496-f049-4fbd-934f-81e6c200a1aa",
+    "physicalContainerID": "2efeb496-f049-4fbd-934f-81e6c200a1ab",
     "type": "mango",
     "longitude": 23,
     "latitude": 23,

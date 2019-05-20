@@ -1,18 +1,20 @@
 package twinkle.agriledger.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import com.heartbeat.StartTransitionCheckFlow
 import net.corda.core.CordaRuntimeException
-import twinkle.agriledger.contracts.TemplateContract
+import twinkle.agriledger.contracts.AssetContract
 //import agriledger.twinkle.firebase.FirebaseRepository
 import twinkle.agriledger.states.*
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
+import net.corda.core.node.services.queryBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import utils.getAssetContainerByPhysicalContainerId
 import java.time.Instant
-import java.util.*
 
 
 // *********
@@ -46,22 +48,22 @@ class OriginateAssetFlowInitiator(val assetContainer: AssetContainerProperties,
 
         // Step 2. Create a new issue command.
         // Remember that a command is a CommandData object and a list of CompositeKeys
-        val issueCommand = Command(TemplateContract.Commands.Issue(),
+        val issueCommand = Command(AssetContract.Commands.Issue(),
                 participants.map { it.owningKey })
 
         // Step 3. Create a new TransactionBuilder object.
         val builder = TransactionBuilder(notary = notary)
 
         // Step 4. Add the parent output state, as well as a command to the transaction builder.
-        builder.addOutputState(assetState, TemplateContract.ID)
+        builder.addOutputState(assetState, AssetContract.ID)
 
 
         // Create child states
         val locationState = LocationState(gps, participants, assetState.linearId)
         val obligationState = ObligationState(obligation, assetState.linearId)
 
-        builder.addOutputState(locationState, TemplateContract.ID)
-        builder.addOutputState(obligationState, TemplateContract.ID)
+        builder.addOutputState(locationState, AssetContract.ID)
+        builder.addOutputState(obligationState, AssetContract.ID)
         builder.addCommand(issueCommand)
 
         // Step 5. Verify and sign parent state with our KeyPair.
@@ -81,6 +83,10 @@ class OriginateAssetFlowInitiator(val assetContainer: AssetContainerProperties,
 //        FirebaseRepository().cacheAsset(assetState.linearId.toString(),
 //                assetContainer.data, assetContainer.owner.toString(), assetContainer.type, dts, gps.latitude, gps.longitude)
 
+        // Run transaction check
+        val queryCriteria = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(assetState.linearId))
+        val locationStateRef =  serviceHub.vaultService.queryBy<LocationState>(queryCriteria).states.single().ref
+        subFlow(StartTransitionCheckFlow(locationStateRef))
         return notarizedTx
     }
 
