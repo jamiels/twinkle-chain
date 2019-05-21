@@ -58,6 +58,9 @@ dependencies {
     // CorDapp dependencies.
     cordapp project(":contracts")
     //compile project(":service")
+
+    // OkHTTP: A simple HTTP library.
+    compile "com.squareup.okhttp3:okhttp:$okhttp_version"
 }
 
 task integrationTest(type: Test, dependsOn: []) {

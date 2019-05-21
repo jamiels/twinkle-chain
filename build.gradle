@@ -12,6 +12,7 @@ buildscript {
         log4j_version = '2.11.2'
         corda_platform_version = '4'
         h2_version = '1.4.197'
+        okhttp_version = '3.5.0'
     }
 
     repositories {
