@@ -20,6 +20,8 @@ import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import org.springframework.web.bind.annotation.*
+import twinkle.agriledger.flows.FinalBuyerPurchaseContainerFlow
+import twinkle.agriledger.states.GpsProperties
 import twinkle.agriledger.states.ObligationState
 import twinkle.agriledger.webserver.servises.FirebaseService
 import java.time.Instant
@@ -55,11 +57,17 @@ class AssetController(val service: NodeService) {
     @PostMapping("move")
     fun moveAsset(@RequestBody moveData: MoveData): ResponseEntity<String> {
         val flowFuture = service.proxy.startFlow(::MoveFlowInitiator,
-                moveData.physicalContainerID,
+                UniqueIdentifier.fromString(moveData.linearId),
                 moveData.toGpsProperties()).returnValue
         return executeTx(flowFuture)
     }
 
+    @PostMapping("finalize/{linearId}")
+    fun finalizeAsset(@PathVariable linearId: String): ResponseEntity<String> {
+        val flowFuture = service.proxy.startFlow(::FinalBuyerPurchaseContainerFlow,
+                UniqueIdentifier.fromString(linearId)).returnValue
+        return executeTx(flowFuture)
+    }
 
     @GetMapping
     fun getAssets(): List<AssetContainerState> {
@@ -67,6 +75,9 @@ class AssetController(val service: NodeService) {
         val sort = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.DESC)))
         return service.proxy.vaultQueryBy<AssetContainerState>(sorting = sort).states.map { it.state.data }
     }
+
+    @GetMapping("count")
+    fun countAssets() = mapOf("unconsumedAssets" to getAssets().size)
 
 
     @GetMapping("trace")
@@ -76,7 +87,21 @@ class AssetController(val service: NodeService) {
                     .states.map { it.state.data }
 
     @GetMapping("trace-status")
-    fun geAssetTraceStatus(@RequestParam linearId: String) = geStateAndStatus(linearId, LocationState::class.java)
+    //fun geAssetTraceStatus(@RequestParam linearId: String) = geStateAndStatus(linearId, LocationState::class.java)
+    fun geAssetTraceStatus(@RequestParam linearId: String): ResponseEntity<List<LocationAndStatus>> {
+        val vaultTrace = service.proxy.vaultQueryBy<LocationState>(QueryCriteria.LinearStateQueryCriteria(
+                linearId = listOf(UniqueIdentifier.fromString(linearId)),
+                status = Vault.StateStatus.ALL))
+        val locationAndStatuses = mutableListOf<LocationAndStatus>()
+        val states = vaultTrace.states.iterator()
+        val statesMetadata = vaultTrace.statesMetadata.iterator()
+        while (states.hasNext() && statesMetadata.hasNext()) {
+            val state = states.next()
+            val stateMetadata = statesMetadata.next()
+            locationAndStatuses.add(LocationAndStatus(state.state.data.gps, stateMetadata.status, stateMetadata.recordedTime))
+        }
+        return ResponseEntity.ok().body(locationAndStatuses)
+    }
 
 
     @GetMapping("obligation-status")
@@ -99,6 +124,7 @@ class AssetController(val service: NodeService) {
     }
 
     data class StateAndStatus(val tx: String, val state: ContractState, val status: Vault.StateStatus, val recordedTime: Instant)
+    data class LocationAndStatus(val gpsProperties: GpsProperties, val status: Vault.StateStatus, val recordedTime: Instant)
 
 
     private fun executeTx(flowFuture: CordaFuture<SignedTransaction>): ResponseEntity<String> {

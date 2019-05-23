@@ -41,7 +41,7 @@ take linear id from one of the state and put it into move flow
 step 3
 Transfer fruits
 - Console
-flow start MoveFlowInitiator physicalContainerID: 2efeb496-f049-4fbd-934f-81e6c200a1aa, gps: {longitude: 77, latitude: 77}
+flow start MoveFlowInitiator linearId: b592e326-b553-453d-9dd9-bc0e8cc66f13, gps: {longitude: 78, latitude: 77}
 - Webserver
 POST 
 http://localhost:12223/asset/move
@@ -49,7 +49,7 @@ body
 {
 	"longitude": 24,
     "latitude": 24,
-    "physicalContainerID": "2efeb496-f049-4fbd-934f-81e6c200a1aa"
+    "linearId": "9ea75384-4c09-479b-b411-613f0de4e91d"
 }
 
 
@@ -60,6 +60,10 @@ repeat step 2 and check states with new data
 GET
 http://localhost:12223/asset/trace?linearId=9ea75384-4c09-479b-b411-613f0de4e91d
 http://localhost:12223/asset/trace-status?linearId=9ea75384-4c09-479b-b411-613f0de4e91d
+
+step 5
+Finalize Asset
+flow start FinalBuyerPurchaseContainerFlow linearId: b592e326-b553-453d-9dd9-bc0e8cc66f13
 
 
 - H2 Console (connection url at logs. Default username: sa, Default empty password)

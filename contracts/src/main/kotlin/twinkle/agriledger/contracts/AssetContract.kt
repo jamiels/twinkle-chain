@@ -17,7 +17,7 @@ class AssetContract : Contract {
     interface Commands : CommandData {
         class Issue : Commands
         class Transfer : Commands
-        class TransitionCheck : Commands
+        class Finalize : Commands
     }
 
     // A transaction is valid if the verify() function of the contract of all the transaction's input and output states
@@ -31,7 +31,7 @@ class AssetContract : Contract {
             is Commands.Transfer -> requireThat {
 
             }
-            is Commands.TransitionCheck -> requireThat {
+            is Commands.Finalize -> requireThat {
 
             }
 
