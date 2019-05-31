@@ -21,18 +21,21 @@ import java.util.*
 // *********
 @BelongsToContract(AssetContract::class)
 data class AssetContainerState(val assetContainer: AssetContainerProperties,
-                               override val linearId: UniqueIdentifier = UniqueIdentifier(),
+                               val linearId: UniqueIdentifier = UniqueIdentifier(),
+                               val physicalContainerID: UUID = linearId.id,
                                val linearIdHash: SecureHash = SecureHash.sha256(linearId.toString()),
-                               override val participants: List<AbstractParty> = listOf()) : LinearState, QueryableState {
+                               override val participants: List<AbstractParty> = listOf()) : QueryableState {
 
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         return when (schema) {
             is AssetContainerSchemaV1 -> AssetContainerSchemaV1.PersistentAssetContainer(
                     this.assetContainer.owner.name.toString(),
                     this.assetContainer.producerID,
+                    this.assetContainer.stage,
                     this.assetContainer.type,
-                    this.assetContainer.physicalContainerID,
-                    this.assetContainer.dts
+                    this.physicalContainerID,
+                    this.assetContainer.dts,
+                    this.linearId.toString()
             )
             else -> throw IllegalArgumentException("Unrecognised schema $schema")
         }
@@ -40,13 +43,18 @@ data class AssetContainerState(val assetContainer: AssetContainerProperties,
 
     override fun supportedSchemas(): Iterable<MappedSchema> = listOf(AssetContainerSchemaV1)
 
+    fun withNewStage(stage: String) = copy(assetContainer = assetContainer.copy(stage = stage))
+
+    fun withNewPhysicalContainerID(physicalContainerID: UUID) =
+            copy(physicalContainerID = physicalContainerID)
+
 }
 
 @CordaSerializable
 data class AssetContainerProperties(val owner: Party,
                                     val producerID: Int,
+                                    val stage: String,
                                     val type: String,
-                                    val physicalContainerID: UUID,
                                     val dts: Instant = Instant.now())
 
 

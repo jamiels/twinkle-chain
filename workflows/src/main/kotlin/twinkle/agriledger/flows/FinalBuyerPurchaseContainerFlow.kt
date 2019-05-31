@@ -1,40 +1,32 @@
 package twinkle.agriledger.flows
 
 import co.paralleluniverse.fibers.Suspendable
-import com.heartbeat.StartTransitionCheckFlow
-import net.corda.core.CordaRuntimeException
 import twinkle.agriledger.contracts.AssetContract
-import twinkle.agriledger.states.GpsProperties
-import twinkle.agriledger.states.LocationState
-import twinkle.agriledger.states.ObligationState
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
-import net.corda.core.node.services.queryBy
-import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import twinkle.agriledger.states.AssetContainerState
-import utils.getAssetContainerByPhysicalContainerId
-import java.util.*
+import utils.getAssetContainerByLinearId
+import utils.getLocationByLinearId
+import utils.getObligationByLinearId
 
 // *********
 // * Flows *
 // *********
 @InitiatingFlow
 @StartableByRPC
-class FinalBuyerPurchaseContainerFlow(val linearId: UniqueIdentifier) : FlowLogic<SignedTransaction>() {
+class FinalBuyerPurchaseContainerFlow(val linearId: String) : FlowLogic<SignedTransaction>() {
     override val progressTracker = ProgressTracker()
 
     @Suspendable
     override fun call(): SignedTransaction {
         // Stage 1. Retrieve States specified by linearId from the vault.
-        val queryCriteria = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(linearId))
-        val assetStateAndRef =  serviceHub.vaultService.queryBy<AssetContainerState>(queryCriteria).states.single()
-        val inputAsset = assetStateAndRef.state.data
-        val locationStateAndRef =  serviceHub.vaultService.queryBy<LocationState>(queryCriteria).states.single()
-        val inputLocation = locationStateAndRef.state.data
-        val obligationStateAndRef =  serviceHub.vaultService.queryBy<ObligationState>(queryCriteria).states.single()
+
+        val assetStateAndRefs =  getAssetContainerByLinearId(linearId, serviceHub)
+        val inputAsset = assetStateAndRefs.first().state.data
+        val locationStateAndRefs =  getLocationByLinearId(linearId, serviceHub)
+        val obligationStateAndRefs =  getObligationByLinearId(linearId, serviceHub)
 
         // Stage 2. Create finalize command.
         val signers = inputAsset.participants.map { it.owningKey }
@@ -45,9 +37,10 @@ class FinalBuyerPurchaseContainerFlow(val linearId: UniqueIdentifier) : FlowLogi
         val builder = TransactionBuilder(notary = notary)
 
         // Stage 4. Create the transaction which comprises 3 inputs, 0 outputs and one command.
-        builder.withItems(assetStateAndRef,
-                locationStateAndRef, obligationStateAndRef,
-                transferCommand)
+        assetStateAndRefs.forEach { builder.withItems(it) }
+        locationStateAndRefs.forEach { builder.withItems(it) }
+        obligationStateAndRefs.forEach { builder.withItems(it) }
+        builder.withItems(transferCommand)
 
         // Stage 5. Verify and sign the transaction.
         builder.verify(serviceHub)
@@ -55,7 +48,7 @@ class FinalBuyerPurchaseContainerFlow(val linearId: UniqueIdentifier) : FlowLogi
 
         // Stage 6. Collect signature and add it to the transaction.
         // This also verifies the transaction and checks the signatures.
-        val inputObligation = obligationStateAndRef.state.data
+        val inputObligation = obligationStateAndRefs.first().state.data
         val counterparty = if (serviceHub.myInfo.legalIdentities.first() == inputObligation.obligation.beneficiary){
             inputObligation.obligation.owner
         } else {

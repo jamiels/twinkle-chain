@@ -21,6 +21,7 @@ import twinkle.agriledger.states.GpsProperties
 import twinkle.agriledger.states.LocationState
 import okhttp3.FormBody
 import twinkle.agriledger.states.AssetContainerState
+import utils.getAssetContainerByPhysicalContainerId
 
 
 /**
@@ -56,12 +57,13 @@ class TransitionCheckFlow(private val stateRefLocation: StateRef,
         val location = serviceHub.vaultService.queryBy<LocationState>(QueryCriteria.VaultQueryCriteria(stateRefs = listOf(stateRefLocation), status = Vault.StateStatus.ALL))
 
 
-        val queryCriteria = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(location.states.single().state.data.linearId))
-        val assetContainer =  serviceHub.vaultService.queryBy<AssetContainerState>(queryCriteria).states.single().state.data.assetContainer
+        val physicalContainerId = location.states.single().state.data.physicalContainerID
+        val assetContainer =  getAssetContainerByPhysicalContainerId(physicalContainerId, serviceHub)!!.state.data
+
 
         val gps = location.states.single().state.data.gps
         if (location.statesMetadata.first().status == Vault.StateStatus.UNCONSUMED){
-            sendEmail(assetContainer.producerID, assetContainer.physicalContainerID.toString(), gps)
+            sendEmail(assetContainer.assetContainer.producerID, assetContainer.physicalContainerID.toString(), gps)
             println("unconsumed")
         } else println("consumed")
 

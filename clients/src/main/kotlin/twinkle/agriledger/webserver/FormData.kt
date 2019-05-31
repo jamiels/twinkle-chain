@@ -15,8 +15,8 @@ import java.util.*
 data class AssetContainerData(
         val owner: String? = null,
         val producerID: Int,
+        val stage: String,
         val type: String,
-        val physicalContainerID: String,
         val longitude: Float,
         val latitude: Float,
         val beneficiary: String? = null,
@@ -24,9 +24,9 @@ data class AssetContainerData(
 
     fun toAssetContainerProperties(proxy: CordaRPCOps) = AssetContainerProperties(
             producerID = producerID,
+            stage = stage,
             owner = partyFromString(owner!!, proxy),
             type = type,
-            physicalContainerID = UUID.fromString(physicalContainerID),
             dts = Instant.now()
     )
 
@@ -44,7 +44,7 @@ data class AssetContainerData(
 data class MoveData(
         val longitude: Float,
         val latitude: Float,
-        val linearId: String){
+        val physicalContainerId: String){
 
     fun toGpsProperties() = GpsProperties(
             longitude = longitude,

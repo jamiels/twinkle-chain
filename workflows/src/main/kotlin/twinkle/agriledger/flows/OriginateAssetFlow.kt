@@ -14,6 +14,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import utils.getAssetContainerByPhysicalContainerId
+import utils.getLocationByPhysicalContainerId
 import java.time.Instant
 
 
@@ -29,22 +30,13 @@ class OriginateAssetFlowInitiator(val assetContainer: AssetContainerProperties,
 
     @Suspendable
     override fun call(): SignedTransaction {
-        // Check if state with such physicalContainerId exists
-        val assetStateAndRef = getAssetContainerByPhysicalContainerId(assetContainer.physicalContainerID, serviceHub)
-        if (assetStateAndRef != null){
-            throw CordaRuntimeException("state with such physicalContainerID have already existed")
-        }
-
-
         // Step 1. Get a reference to the notary service on our network and our key pair.
         // Note: ongoing work to support multiple notary identities is still in progress.
         val notary = serviceHub.networkMapCache.notaryIdentities.first()
         val participants = listOf(assetContainer.owner, obligation.beneficiary)
 
         //create state and additional data for child states
-        val dts = Instant.now()
         val assetState = AssetContainerState(assetContainer, participants = participants)
-
 
         // Step 2. Create a new issue command.
         // Remember that a command is a CommandData object and a list of CompositeKeys
@@ -59,8 +51,8 @@ class OriginateAssetFlowInitiator(val assetContainer: AssetContainerProperties,
 
 
         // Create child states
-        val locationState = LocationState(gps, participants, assetState.linearId)
-        val obligationState = ObligationState(obligation, assetState.linearId)
+        val locationState = LocationState(gps, assetState.physicalContainerID, participants, assetState.linearId)
+        val obligationState = ObligationState(obligation, assetState.physicalContainerID, assetState.linearId)
 
         builder.addOutputState(locationState, AssetContract.ID)
         builder.addOutputState(obligationState, AssetContract.ID)
@@ -84,8 +76,7 @@ class OriginateAssetFlowInitiator(val assetContainer: AssetContainerProperties,
 //                assetContainer.data, assetContainer.owner.toString(), assetContainer.type, dts, gps.latitude, gps.longitude)
 
         // Run transaction check
-        val queryCriteria = QueryCriteria.LinearStateQueryCriteria(linearId = listOf(assetState.linearId))
-        val locationStateRef =  serviceHub.vaultService.queryBy<LocationState>(queryCriteria).states.single().ref
+        val locationStateRef =  getLocationByPhysicalContainerId(assetState.physicalContainerID, serviceHub)!!.ref
         subFlow(StartTransitionCheckFlow(locationStateRef))
         return notarizedTx
     }

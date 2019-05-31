@@ -19,8 +19,8 @@ import java.util.concurrent.CountDownLatch
 fun main(args : Array<String>) {
     val repo = FirebaseService()
     //repo.cacheAsset("f14e0bd8-7edb-421f-8a17-554d81111f0d", AssetContainerProperties("data", "owner", "type", Instant.now(), 12.3F, 13.4F))
-    repo.cacheMove("f14e0bd8-7edb-421f-8a17-554d81111f0d", GpsProperties(7F, 77F))
-    repo.cacheMove("f14e0bd8-7edb-421f-8a17-554d81111f0d", GpsProperties(777F, 7777F))
+    //repo.cacheMove("f14e0bd8-7edb-421f-8a17-554d81111f0d", GpsProperties(7F, 77F))
+    //repo.cacheMove("f14e0bd8-7edb-421f-8a17-554d81111f0d", GpsProperties(777F, 7777F))
 }
 
 @Service
@@ -31,10 +31,10 @@ class FirebaseService{
         private var firebasDatabase: FirebaseDatabase? = null
     }
 
-    fun cacheAsset(linearId: String, assetContainer: AssetContainerProperties){
+    fun cacheAsset(linearId: String, assetContainer: AssetContainerProperties, physicalContainerID: String){
         val assetToCache = AssetToCache(
                 assetContainer.producerID,
-                assetContainer.physicalContainerID.toString(),
+                physicalContainerID,
                 assetContainer.owner.toString(),
                 assetContainer.type,
                 assetContainer.dts)
@@ -48,9 +48,13 @@ class FirebaseService{
                             val dts: Instant)
 
     fun cacheMove(linearId: String,
-                  gps: GpsProperties){
-        save(keysPath = "/move/$linearId/${Instant.now().toEpochMilli()}", value = gps)
+                  gps: GpsProperties,
+                  physicalContainerID: String){
+        save(keysPath = "/move/$linearId/${Instant.now().toEpochMilli()}", value = MoveToCache(gps, physicalContainerID))
     }
+
+    data class MoveToCache(val gps: GpsProperties,
+                           val physicalContainerID: String)
 
 
     private fun save(keysPath: String, value: Any){

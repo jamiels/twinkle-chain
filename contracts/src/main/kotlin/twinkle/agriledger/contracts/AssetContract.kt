@@ -17,6 +17,7 @@ class AssetContract : Contract {
     interface Commands : CommandData {
         class Issue : Commands
         class Transfer : Commands
+        class NewStage : Commands
         class Finalize : Commands
     }
 
@@ -29,6 +30,9 @@ class AssetContract : Contract {
 
             }
             is Commands.Transfer -> requireThat {
+
+            }
+            is Commands.NewStage -> requireThat {
 
             }
             is Commands.Finalize -> requireThat {

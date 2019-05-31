@@ -1,11 +1,9 @@
 package twinkle.agriledger.webserver
 
-import twinkle.agriledger.flows.MoveFlowInitiator
 import net.corda.core.messaging.startFlow
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import twinkle.agriledger.flows.OriginateAssetFlowInitiator
 import twinkle.agriledger.states.AssetContainerState
 import twinkle.agriledger.states.LocationState
 import twinkle.agriledger.webserver.servises.NodeService
@@ -20,11 +18,13 @@ import net.corda.core.node.services.vault.SortAttribute
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import org.springframework.web.bind.annotation.*
-import twinkle.agriledger.flows.FinalBuyerPurchaseContainerFlow
+import twinkle.agriledger.flows.*
 import twinkle.agriledger.states.GpsProperties
-import twinkle.agriledger.states.ObligationState
 import twinkle.agriledger.webserver.servises.FirebaseService
+import utils.getLocationByLinearIdAll
+import utils.getObligationByLinearIdAll
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import javax.annotation.PostConstruct
 import kotlin.concurrent.thread
@@ -57,15 +57,38 @@ class AssetController(val service: NodeService) {
     @PostMapping("move")
     fun moveAsset(@RequestBody moveData: MoveData): ResponseEntity<String> {
         val flowFuture = service.proxy.startFlow(::MoveFlowInitiator,
-                UniqueIdentifier.fromString(moveData.linearId),
+                moveData.physicalContainerId,
                 moveData.toGpsProperties()).returnValue
+        return executeTx(flowFuture)
+    }
+
+    @PostMapping("set-stage/{physicalContainerId}/{stage}")
+    fun setStage(@PathVariable physicalContainerId: String,
+                 @PathVariable stage: String): ResponseEntity<String> {
+        val flowFuture = service.proxy.startFlow(::AssetNewStageFlow,
+                physicalContainerId, stage).returnValue
+        return executeTx(flowFuture)
+    }
+
+    @PostMapping("split/{physicalContainerId}/{splitNumber}")
+    fun splitAsset(@PathVariable physicalContainerId: String,
+                   @PathVariable splitNumber: Int): ResponseEntity<String> {
+        val flowFuture = service.proxy.startFlow(::SplitAssetContainerFlow,
+                physicalContainerId, splitNumber).returnValue
+        return executeTx(flowFuture)
+    }
+
+    @PostMapping("merge")
+    fun splitAsset(@RequestBody physicalContainerIDs: List<String>): ResponseEntity<String> {
+        val flowFuture = service.proxy.startFlow(::MergeAssetContainersFlow,
+                physicalContainerIDs).returnValue
         return executeTx(flowFuture)
     }
 
     @PostMapping("finalize/{linearId}")
     fun finalizeAsset(@PathVariable linearId: String): ResponseEntity<String> {
         val flowFuture = service.proxy.startFlow(::FinalBuyerPurchaseContainerFlow,
-                UniqueIdentifier.fromString(linearId)).returnValue
+                linearId).returnValue
         return executeTx(flowFuture)
     }
 
@@ -80,33 +103,36 @@ class AssetController(val service: NodeService) {
     fun countAssets() = mapOf("unconsumedAssets" to getAssets().size)
 
 
-    @GetMapping("trace")
-    fun geAssetTrace(linearId: String) =
-            service.proxy.vaultQueryBy<LocationState>(QueryCriteria.LinearStateQueryCriteria(
-                    linearId = listOf(UniqueIdentifier.fromString(linearId))))
-                    .states.map { it.state.data }
-
     @GetMapping("trace-status")
     //fun geAssetTraceStatus(@RequestParam linearId: String) = geStateAndStatus(linearId, LocationState::class.java)
     fun geAssetTraceStatus(@RequestParam linearId: String): ResponseEntity<List<LocationAndStatus>> {
-        val vaultTrace = service.proxy.vaultQueryBy<LocationState>(QueryCriteria.LinearStateQueryCriteria(
-                linearId = listOf(UniqueIdentifier.fromString(linearId)),
-                status = Vault.StateStatus.ALL))
+        val vaultTrace = getLocationByLinearIdAll(linearId, service.proxy)
         val locationAndStatuses = mutableListOf<LocationAndStatus>()
         val states = vaultTrace.states.iterator()
         val statesMetadata = vaultTrace.statesMetadata.iterator()
         while (states.hasNext() && statesMetadata.hasNext()) {
             val state = states.next()
             val stateMetadata = statesMetadata.next()
-            locationAndStatuses.add(LocationAndStatus(state.state.data.gps, stateMetadata.status, stateMetadata.recordedTime))
+            val stateData = state.state.data
+            locationAndStatuses.add(LocationAndStatus(stateData.gps, stateData.physicalContainerID ,stateMetadata.status, stateMetadata.recordedTime))
         }
         return ResponseEntity.ok().body(locationAndStatuses)
     }
 
 
     @GetMapping("obligation-status")
-    fun geAssetObligationStatus(@RequestParam linearId: String) = geStateAndStatus(linearId, ObligationState::class.java)
-
+    fun geAssetObligationStatus(@RequestParam linearId: String): ResponseEntity<List<StateAndStatus>> {
+        val vaultTrace = getObligationByLinearIdAll(linearId, service.proxy)
+        val obligationAndStatuses = mutableListOf<StateAndStatus>()
+        val states = vaultTrace.states.iterator()
+        val statesMetadata = vaultTrace.statesMetadata.iterator()
+        while (states.hasNext() && statesMetadata.hasNext()) {
+            val state = states.next()
+            val stateMetadata = statesMetadata.next()
+            obligationAndStatuses.add(StateAndStatus(state.ref.txhash.toString() ,state.state.data, stateMetadata.status, stateMetadata.recordedTime))
+        }
+        return ResponseEntity.ok().body(obligationAndStatuses)
+    }
 
     private fun <T : ContractState>geStateAndStatus(linearId: String, contractState: Class<out T>): ResponseEntity<List<StateAndStatus>> {
         val vaultTrace = service.proxy.vaultQueryByCriteria(QueryCriteria.LinearStateQueryCriteria(
@@ -124,7 +150,7 @@ class AssetController(val service: NodeService) {
     }
 
     data class StateAndStatus(val tx: String, val state: ContractState, val status: Vault.StateStatus, val recordedTime: Instant)
-    data class LocationAndStatus(val gpsProperties: GpsProperties, val status: Vault.StateStatus, val recordedTime: Instant)
+    data class LocationAndStatus(val gpsProperties: GpsProperties, val physicalContainerId: UUID, val status: Vault.StateStatus, val recordedTime: Instant)
 
 
     private fun executeTx(flowFuture: CordaFuture<SignedTransaction>): ResponseEntity<String> {
@@ -161,11 +187,12 @@ class AssetController(val service: NodeService) {
                             is AssetContainerState -> {
                                 // cache new asset data into firebase
                                 FirebaseService().cacheAsset(contractState.linearId.toString(),
-                                        contractState.assetContainer)
+                                        contractState.assetContainer, contractState.physicalContainerID.toString())
                                 println("new asset created: $contractState")
                             }
                             is LocationState -> {
-                                FirebaseService().cacheMove(contractState.linearId.toString(), contractState.gps)
+                                FirebaseService().cacheMove(contractState.linearId.toString(),
+                                        contractState.gps, contractState.physicalContainerID.toString())
                                 println("asset moved: ${contractState}")
                             }
                             else -> println("some updates: ${contractState}")
