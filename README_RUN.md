@@ -69,9 +69,11 @@ GET
 http://localhost:12223/asset/trace?linearId=9ea75384-4c09-479b-b411-613f0de4e91d
 http://localhost:12223/asset/trace-status?linearId=9ea75384-4c09-479b-b411-613f0de4e91d
 
+
 step 5
 Split assets
 flow start SplitAssetContainerFlow physicalContainerID: 2050db30-6c20-4a5a-b7d5-d1fa365ae769, splitNumber: 20
+        
                                                                  
 step 6
 flow start MergeAssetContainersFlow physicalContainerIDs: [602edb3f-9d54-4d29-94c8-f09aeb18192c, 058e4b58-c632-41a8-950c-693b1b5b88ed]
