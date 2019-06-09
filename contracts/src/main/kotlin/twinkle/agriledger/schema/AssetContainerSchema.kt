@@ -29,7 +29,10 @@ object AssetContainerSchemaV1 : MappedSchema(
             val owner: String,
 
             @Column(name = "producerID")
-            val producerID: Int,
+            val producerId: Int,
+
+            @Column(name = "pick_up_requestId")
+            val prId: String,
 
             @Column(name = "stage")
             val stage: String,
@@ -47,7 +50,7 @@ object AssetContainerSchemaV1 : MappedSchema(
             val linearId: String
     ) : PersistentState() {
         // Default constructor required by hibernate.
-        constructor(): this("", 0,"", "", UUID.randomUUID(), Instant.now(), "")
+        constructor(): this("", 0,"", "", "", UUID.randomUUID(), Instant.now(), "")
 
     }
 }

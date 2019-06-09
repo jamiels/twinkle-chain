@@ -31,6 +31,7 @@ data class AssetContainerState(val assetContainer: AssetContainerProperties,
             is AssetContainerSchemaV1 -> AssetContainerSchemaV1.PersistentAssetContainer(
                     this.assetContainer.owner.name.toString(),
                     this.assetContainer.producerID,
+                    this.assetContainer.prId,
                     this.assetContainer.stage,
                     this.assetContainer.type,
                     this.physicalContainerID,
@@ -53,6 +54,7 @@ data class AssetContainerState(val assetContainer: AssetContainerProperties,
 @CordaSerializable
 data class AssetContainerProperties(val owner: Party,
                                     val producerID: Int,
+                                    val prId: String,
                                     val stage: String,
                                     val type: String,
                                     val dts: Instant = Instant.now())

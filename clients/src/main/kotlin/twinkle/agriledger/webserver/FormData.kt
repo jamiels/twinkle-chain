@@ -15,6 +15,7 @@ import java.util.*
 data class AssetContainerData(
         val owner: String? = null,
         val producerID: Int,
+        val prId: String,
         val stage: String,
         val type: String,
         val longitude: Float,
@@ -24,6 +25,7 @@ data class AssetContainerData(
 
     fun toAssetContainerProperties(proxy: CordaRPCOps) = AssetContainerProperties(
             producerID = producerID,
+            prId = prId,
             stage = stage,
             owner = partyFromString(owner!!, proxy),
             type = type,

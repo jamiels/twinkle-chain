@@ -1,26 +1,30 @@
 package twinkle.agriledger.webserver
 
-import net.corda.core.messaging.startFlow
-import org.slf4j.LoggerFactory
-import org.springframework.http.HttpStatus
-import org.springframework.http.ResponseEntity
-import twinkle.agriledger.states.AssetContainerState
-import twinkle.agriledger.states.LocationState
-import twinkle.agriledger.webserver.servises.NodeService
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.Builder.equal
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.node.services.vault.SortAttribute
+import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
+import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import twinkle.agriledger.flows.*
+import twinkle.agriledger.schema.AssetContainerSchemaV1
+import twinkle.agriledger.states.AssetContainerState
 import twinkle.agriledger.states.GpsProperties
+import twinkle.agriledger.states.LocationState
 import twinkle.agriledger.webserver.servises.FirebaseService
+import twinkle.agriledger.webserver.servises.NodeService
 import utils.getLocationByLinearIdAll
 import utils.getObligationByLinearIdAll
 import java.time.Instant
@@ -102,6 +106,25 @@ class AssetController(val service: NodeService) {
     @GetMapping("count")
     fun countAssets() = mapOf("unconsumedAssets" to getAssets().size)
 
+    @GetMapping("status/{linearId}")
+    fun geAssetStatus(@PathVariable linearId: String): ResponseEntity<List<StateAndStatus>> {
+        val vaultTrace = getAssetByLinearIdAll(linearId, service.proxy)
+        val locationAndStatuses = mutableListOf<StateAndStatus>()
+        val states = vaultTrace.states.iterator()
+        val statesMetadata = vaultTrace.statesMetadata.iterator()
+        while (states.hasNext() && statesMetadata.hasNext()) {
+            val state = states.next()
+            val stateMetadata = statesMetadata.next()
+            val stateData = state.state.data
+            locationAndStatuses.add(StateAndStatus(state.ref.txhash.toString(), state.state.data, stateMetadata.status, stateMetadata.recordedTime))
+        }
+        return ResponseEntity.ok().body(locationAndStatuses)
+    }
+
+    @GetMapping("{linearId}")
+    fun geAsset(@PathVariable linearId: String) =
+        getAssetByLinearId(linearId, service.proxy).states.map { it.state.data }
+
 
     @GetMapping("trace-status")
     //fun geAssetTraceStatus(@RequestParam linearId: String) = geStateAndStatus(linearId, LocationState::class.java)
@@ -129,7 +152,7 @@ class AssetController(val service: NodeService) {
         while (states.hasNext() && statesMetadata.hasNext()) {
             val state = states.next()
             val stateMetadata = statesMetadata.next()
-            obligationAndStatuses.add(StateAndStatus(state.ref.txhash.toString() ,state.state.data, stateMetadata.status, stateMetadata.recordedTime))
+            obligationAndStatuses.add(StateAndStatus(state.ref.txhash.toString(), state.state.data, stateMetadata.status, stateMetadata.recordedTime))
         }
         return ResponseEntity.ok().body(obligationAndStatuses)
     }
@@ -205,6 +228,48 @@ class AssetController(val service: NodeService) {
             subscribeObservable()
         }
         countDownLatch.await()
+    }
+
+    fun getAssetByLinearIdAll(linearId: String, services: CordaRPCOps): Vault.Page<AssetContainerState> {
+        return getAllStates<AssetContainerState>(services) { generalCriteria ->
+            val additionalCriteria =
+                    QueryCriteria.VaultCustomQueryCriteria(AssetContainerSchemaV1.PersistentAssetContainer::linearId.equal(linearId),
+                            status = Vault.StateStatus.ALL)
+            generalCriteria.and(additionalCriteria)
+        }
+    }
+
+    fun getAssetByLinearId(linearId: String, services: CordaRPCOps): Vault.Page<AssetContainerState> {
+        return getAllStates<AssetContainerState>(services) { generalCriteria ->
+            val additionalCriteria =
+                    QueryCriteria.VaultCustomQueryCriteria(AssetContainerSchemaV1.PersistentAssetContainer::linearId.equal(linearId),
+                            status = Vault.StateStatus.UNCONSUMED)
+            generalCriteria.and(additionalCriteria)
+        }
+    }
+
+    private inline fun <reified U : ContractState> getAllStates(
+            services: CordaRPCOps,
+            block: (generalCriteria: QueryCriteria.VaultQueryCriteria) -> QueryCriteria
+    ): Vault.Page<U> {
+        val query = builder {
+            val generalCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL)
+            block(generalCriteria)
+        }
+        val result = services.vaultQueryBy<U>(query)
+        return result
+    }
+
+    private inline fun <reified U : ContractState> getStates(
+            services: CordaRPCOps,
+            block: (generalCriteria: QueryCriteria.VaultQueryCriteria) -> QueryCriteria
+    ): Vault.Page<U> {
+        val query = builder {
+            val generalCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
+            block(generalCriteria)
+        }
+        val result = services.vaultQueryBy<U>(query)
+        return result
     }
 }
 

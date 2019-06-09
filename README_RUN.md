@@ -17,12 +17,11 @@ http://localhost:12223/asset/create
 body
 {
     "producerID": 1,
-    "stage": "Ready for Pickup"
-    "physicalContainerID": "2efeb496-f049-4fbd-934f-81e6c200a1ab",
+    "stage": "Ready for Pickup",
+    "prId": "2efeb496-f049-4fbd-934f-81e6c200a1ab",
     "type": "mango",
     "longitude": 23,
     "latitude": 23,
-    "beneficiary": "O=PartyB,L=New York,C=US",
     "amount": 123
 }
 
