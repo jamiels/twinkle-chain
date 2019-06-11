@@ -42,5 +42,5 @@ data class LocationState(val gps: GpsProperties,
 }
 
 @CordaSerializable
-data class GpsProperties(val longitude: Float,
-                         val latitude: Float)
+data class GpsProperties(val longitude: Float = -72.288193,
+                         val latitude: Float = 18.513815)
